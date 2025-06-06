@@ -2,7 +2,7 @@ import json
 import os
 
 # Load output.json from the root folder
-with open("output.json", "r", encoding="utf-8") as f:
+with open("output/output.json", "r", encoding="utf-8") as f:
     data = json.load(f)
 
 # Build category ID → name map

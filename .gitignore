@@ -1,15 +1,9 @@
 # Ignore backup and output files
-output.json
-xyz.jmir.tachiyomi.mi_2025-06-05_11-42.tachibk
-tachiyomi_2023-10-02_00-51.proto.gz
+
+
 
 # Ignore specific .txt files in sub/
-manga/sub/
-manga/extension
-
-README.md
 # Ignore the JSON index
-manga/all.json
 
 # Bytecode and cache
 __pycache__/
