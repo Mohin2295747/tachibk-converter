@@ -1,26 +1,12 @@
 # Ignore backup and output files
 output.json
 xyz.jmir.tachiyomi.mi_2025-06-05_11-42.tachibk
+tachiyomi_2023-10-02_00-51.proto.gz
 
 # Ignore specific .txt files in sub/
-manga/sub/0%.txt
-manga/sub/Explain .txt
-manga/sub/Manhwa (60-80%).txt
-manga/sub/Manhwa (80-100%).txt
-manga/sub/Manhwa (90-100%).txt
-manga/sub/Manhwa 2 (40-60%).txt
-manga/sub/Manhwa 3 (20-40%).txt
-manga/sub/Manhwa temp.txt
-manga/sub/dropped.txt
-manga/sub/explain watched.txt
-manga/sub/plan to watch.txt
-manga/sub/postponed.txt
-manga/sub/raw.txt
-manga/sub/rewatch.txt
-manga/sub/wait.txt
-manga/sub/wait2.txt
-manga/sub/watched.txt
-manga/sub/watching.txt
+manga/sub/
+manga/extension
+
 README.md
 # Ignore the JSON index
 manga/all.json
