@@ -21,7 +21,10 @@ A Termux-friendly tool to convert `.tachibk`, `.proto`, and `.proto.gz` backup f
 ---
 
 ## 🧠 Setup
-
+### 0. clone repository:
+```bash
+got clone https://github.com/Mohin2295747/tachibk-converter.git
+```
 ### 1. Place your backup files in:
 
 ```bash
@@ -134,7 +137,7 @@ python3 json_to_tachibk.py --input output/output.json --output restored.tachibk
 
 ---
 
-## 🔁 Restore JSON → `.tachibk`
+##1. 🔁 Restore .JSON → `.tachibk`
 
 ```bash
 python3 json_to_tachibk.py --input output/output.json --output restored.tachibk
@@ -143,7 +146,13 @@ cp restored.tachibk /sdcard/Download/
 
 You can also use your own or a filtered `.json` file (from `category_filter.py`).
 
-Then restore it in Tachiyomi or Mihon:
+##2. Just run it'll automatically show `.json` file inside `output/*` by time
+```bash
+python3 json_to_tachibk.py
+```
+Now select one file and get .tachibk file of this .json file
+
+###Then restore it in Tachiyomi or Mihon:
 
 ```
 Settings → Backup & Restore → Restore
