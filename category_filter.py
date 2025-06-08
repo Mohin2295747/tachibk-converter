@@ -1,0 +1,142 @@
+import json
+import os
+from collections import defaultdict
+
+def load_emoji_map(path="manga/emoji.txt"):
+    emoji_map = {}
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                if ":" in line:
+                    key, emoji = line.strip().split(":", 1)
+                    emoji_map[key.strip()] = emoji.strip()
+    else:
+        print("⚠️ emoji.txt not found. Emojis will be skipped.")
+    return emoji_map
+
+# Load data
+with open("output/output.json", "r", encoding="utf-8") as f:
+    data = json.load(f)
+
+emoji_map = load_emoji_map()
+
+# Build category and source mappings
+category_map = {}
+for i, cat in enumerate(data.get("backupCategories", [])):
+    key = str(cat.get("order", i))
+    category_map[key] = cat.get("name", "Uncategorized")
+
+source_map = {}
+for src in data.get("backupSources", []):
+    source_map[str(src.get("sourceId"))] = src.get("name", "Unknown")
+
+# Extract manga data
+manga_list = []
+for manga in data.get("backupManga", []):
+    title = manga.get("title", "Unknown Title")
+    category_ids = manga.get("categories", [])
+    categories = [category_map.get(str(cid), "Uncategorized") for cid in category_ids] or ["Uncategorized"]
+    source_id = str(manga.get("source", ""))
+    extension = source_map.get(source_id, f"Unknown ({source_id})")
+
+    chapters = manga.get("chapters", [])
+    total_chapters = len(chapters)
+    read_chapters = sum(1 for c in chapters if c.get("read", False))
+
+    manga_list.append({
+        "raw_data": manga,
+        "title": title,
+        "categories": categories,
+        "extension": extension,
+        "read_chapters": read_chapters,
+        "total_chapters": total_chapters
+    })
+
+# Build category list with counts
+category_counts = defaultdict(int)
+for manga in manga_list:
+    for cat in manga["categories"]:
+        category_counts[cat] += 1
+
+# Sort categories alphabetically
+sorted_categories = sorted(category_counts.items(), key=lambda x: x[0].lower())
+
+# Display categories with colors
+print("\n\033[1mAvailable Categories:\033[0m")
+for i, (category, count) in enumerate(sorted_categories, 1):
+    emoji = emoji_map.get(category, "•")
+    print(f"\033[94m{i:>2}.\033[0m {emoji} {category}: \033[93m{count}\033[0m manga")
+
+# User selection
+print("\n\033[1mOptions:\033[0m")
+print("\033[92m1. Remove selected categories\033[0m")
+print("\033[91m2. Keep only selected categories\033[0m")
+
+choice = input("\nEnter your choice (1/2): ")
+while choice not in ["1", "2"]:
+    print("Invalid choice!")
+    choice = input("Enter your choice (1/2): ")
+
+# Get category selections
+selected = input("\nEnter category numbers to select (space-separated): ").split()
+selected_indices = [int(i) for i in selected if i.isdigit()]
+
+# Validate selections
+valid_indices = [i for i in selected_indices if 1 <= i <= len(sorted_categories)]
+if not valid_indices:
+    print("No valid categories selected. Exiting.")
+    exit()
+
+# Get selected category names
+selected_categories = [sorted_categories[i - 1][0] for i in valid_indices]
+
+# Process based on user choice
+output_data = data.copy()
+output_data["backupManga"] = []
+
+if choice == "1":
+    # Remove selected categories
+    print("\n\033[92mRemoving selected categories...\033[0m")
+    for manga in manga_list:
+        new_categories = [cat for cat in manga["categories"] if cat not in selected_categories]
+
+        if not new_categories:
+            new_categories = ["Uncategorized"]
+
+        manga["raw_data"]["categories"] = [
+            cat_id for cat_id in manga["raw_data"].get("categories", [])
+            if category_map.get(str(cat_id), "Uncategorized") not in selected_categories
+        ]
+        output_data["backupManga"].append(manga["raw_data"])
+
+    output_file = "output/output_removed.json"
+
+else:
+    # Keep only selected categories
+    print("\n\033[91mKeeping only selected categories...\033[0m")
+    for manga in manga_list:
+        if any(cat in selected_categories for cat in manga["categories"]):
+            manga["raw_data"]["categories"] = [
+                cat_id for cat_id in manga["raw_data"].get("categories", [])
+                if category_map.get(str(cat_id), "Uncategorized") in selected_categories
+            ]
+            output_data["backupManga"].append(manga["raw_data"])
+
+    output_file = "output/output_kept.json"
+
+# ✅ Trim unused categories
+used_cat_ids = set()
+for manga in output_data["backupManga"]:
+    used_cat_ids.update(manga.get("categories", []))
+
+output_data["backupCategories"] = [
+    cat for cat in data.get("backupCategories", [])
+    if cat.get("order", cat.get("order")) in used_cat_ids
+]
+
+# Save cleaned output
+with open(output_file, "w", encoding="utf-8") as f:
+    json.dump(output_data, f, ensure_ascii=False, indent=2)
+
+print(f"\n✅ Processing complete! Cleaned data saved to \033[1m{output_file}\033[0m")
+print(f"Selected categories: {', '.join(selected_categories)}")

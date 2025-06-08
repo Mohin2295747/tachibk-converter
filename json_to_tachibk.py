@@ -1,8 +1,8 @@
 import json
 import gzip
 import varint
+import os
 from base64 import b64encode
-from argparse import ArgumentParser
 from struct import pack
 from google.protobuf.json_format import Parse, ParseError
 
@@ -11,13 +11,6 @@ import sys
 sys.path.insert(0, './manga/proto')
 from schema_pb2 import Backup
 
-# Argument setup
-parser = ArgumentParser(description="Convert output.json to .tachibk")
-parser.add_argument("--input", "-i", required=True, help="Path to JSON backup (e.g., output.json)")
-parser.add_argument("--output", "-o", required=True, help="Path to save the .tachibk file")
-args = parser.parse_args()
-
-# Re-encode preference values
 def bytes_preference(preference_value: dict):
     true_value = preference_value['value']['truevalue']
     ptype = preference_value['value']['type'].split('.')[-1].removesuffix('PreferenceValue')
@@ -42,21 +35,17 @@ def bytes_preference(preference_value: dict):
     else:
         return ''
 
-# Encode .json to protobuf bytes
 def convert_json_to_bytes(path: str) -> bytes:
     with open(path, "r", encoding="utf-8") as f:
         message_dict = json.load(f)
 
     def needs_encoding(val):
-        # If it's already a base64-encoded string (likely ends with '='), skip it
         return not isinstance(val, str) or not val.endswith("=")
 
-    # Encode backupPreferences
     for pref in message_dict.get("backupPreferences", []):
         if needs_encoding(pref["value"]["truevalue"]):
             pref["value"]["truevalue"] = bytes_preference(pref)
 
-    # Encode backupSourcePreferences
     for source in message_dict.get("backupSourcePreferences", []):
         for pref in source.get("prefs", []):
             if needs_encoding(pref["value"]["truevalue"]):
@@ -68,13 +57,39 @@ def convert_json_to_bytes(path: str) -> bytes:
         print("❌ Invalid JSON backup:", e)
         exit(1)
 
-# Write final .tachibk file
 def write_tachibk(message_bytes: bytes, output_path: str):
     with gzip.open(output_path, "wb") as f:
         f.write(message_bytes)
     print(f"✅ Compressed backup written to {output_path}")
 
-# Run
+def list_json_files_sorted(directory="output"):
+    files = [f for f in os.listdir(directory) if f.endswith(".json")]
+    files = sorted(files, key=lambda f: os.path.getmtime(os.path.join(directory, f)), reverse=True)
+    return files
+
+def main():
+    print("\n\033[1mAvailable JSON files (newest first):\033[0m")
+    files = list_json_files_sorted()
+
+    if not files:
+        print("❌ No .json files found in the output/ directory.")
+        return
+
+    for i, file in enumerate(files, 1):
+        timestamp = os.path.getmtime(os.path.join("output", file))
+        print(f"\033[96m{i:>2}.\033[0m {file} \033[90m(last modified: {timestamp:.0f})\033[0m")
+
+    selected = input("\nEnter the number of the JSON file to convert: ").strip()
+    if not selected.isdigit() or not (1 <= int(selected) <= len(files)):
+        print("❌ Invalid selection.")
+        return
+
+    selected_file = files[int(selected) - 1]
+    input_path = os.path.join("output", selected_file)
+    output_path = os.path.join("output", selected_file.replace(".json", ".tachibk"))
+
+    msg = convert_json_to_bytes(input_path)
+    write_tachibk(msg, output_path)
+
 if __name__ == "__main__":
-    msg = convert_json_to_bytes(args.input)
-    write_tachibk(msg, args.output)
+    main()
