@@ -23,7 +23,7 @@ A Termux-friendly tool to convert `.tachibk`, `.proto`, and `.proto.gz` backup f
 ## 🧠 Setup
 ### 0. clone repository:
 ```bash
-got clone https://github.com/Mohin2295747/tachibk-converter.git
+git clone https://github.com/Mohin2295747/tachibk-converter.git
 ```
 ### 1. Place your backup files in:
 
