@@ -103,7 +103,7 @@ class BackupHistory(_message.Message):
     def __init__(self, url: _Optional[str] = ..., lastRead: _Optional[int] = ..., readDuration: _Optional[int] = ...) -> None: ...
 
 class BackupManga(_message.Message):
-    __slots__ = ("source", "url", "title", "artist", "author", "description", "genre", "status", "thumbnailUrl", "dateAdded", "viewer", "chapters", "categories", "tracking", "favorite", "chapterFlags", "viewer_flags", "history", "updateStrategy", "lastModifiedAt", "favoriteModifiedAt", "excludedScanlators", "version", "notes")
+    __slots__ = ("source", "url", "title", "artist", "author", "description", "genre", "status", "thumbnailUrl", "dateAdded", "viewer", "chapters", "categories", "tracking", "favorite", "chapterFlags", "viewer_flags", "history", "updateStrategy", "lastModifiedAt", "favoriteModifiedAt", "excludedScanlators", "version", "notes", "initialized")
     SOURCE_FIELD_NUMBER: _ClassVar[int]
     URL_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
@@ -128,6 +128,7 @@ class BackupManga(_message.Message):
     EXCLUDEDSCANLATORS_FIELD_NUMBER: _ClassVar[int]
     VERSION_FIELD_NUMBER: _ClassVar[int]
     NOTES_FIELD_NUMBER: _ClassVar[int]
+    INITIALIZED_FIELD_NUMBER: _ClassVar[int]
     source: int
     url: str
     title: str
@@ -152,7 +153,8 @@ class BackupManga(_message.Message):
     excludedScanlators: _containers.RepeatedScalarFieldContainer[str]
     version: int
     notes: str
-    def __init__(self, source: _Optional[int] = ..., url: _Optional[str] = ..., title: _Optional[str] = ..., artist: _Optional[str] = ..., author: _Optional[str] = ..., description: _Optional[str] = ..., genre: _Optional[_Iterable[str]] = ..., status: _Optional[int] = ..., thumbnailUrl: _Optional[str] = ..., dateAdded: _Optional[int] = ..., viewer: _Optional[int] = ..., chapters: _Optional[_Iterable[_Union[BackupChapter, _Mapping]]] = ..., categories: _Optional[_Iterable[int]] = ..., tracking: _Optional[_Iterable[_Union[BackupTracking, _Mapping]]] = ..., favorite: bool = ..., chapterFlags: _Optional[int] = ..., viewer_flags: _Optional[int] = ..., history: _Optional[_Iterable[_Union[BackupHistory, _Mapping]]] = ..., updateStrategy: _Optional[_Union[UpdateStrategy, str]] = ..., lastModifiedAt: _Optional[int] = ..., favoriteModifiedAt: _Optional[int] = ..., excludedScanlators: _Optional[_Iterable[str]] = ..., version: _Optional[int] = ..., notes: _Optional[str] = ...) -> None: ...
+    initialized: bool
+    def __init__(self, source: _Optional[int] = ..., url: _Optional[str] = ..., title: _Optional[str] = ..., artist: _Optional[str] = ..., author: _Optional[str] = ..., description: _Optional[str] = ..., genre: _Optional[_Iterable[str]] = ..., status: _Optional[int] = ..., thumbnailUrl: _Optional[str] = ..., dateAdded: _Optional[int] = ..., viewer: _Optional[int] = ..., chapters: _Optional[_Iterable[_Union[BackupChapter, _Mapping]]] = ..., categories: _Optional[_Iterable[int]] = ..., tracking: _Optional[_Iterable[_Union[BackupTracking, _Mapping]]] = ..., favorite: bool = ..., chapterFlags: _Optional[int] = ..., viewer_flags: _Optional[int] = ..., history: _Optional[_Iterable[_Union[BackupHistory, _Mapping]]] = ..., updateStrategy: _Optional[_Union[UpdateStrategy, str]] = ..., lastModifiedAt: _Optional[int] = ..., favoriteModifiedAt: _Optional[int] = ..., excludedScanlators: _Optional[_Iterable[str]] = ..., version: _Optional[int] = ..., notes: _Optional[str] = ..., initialized: bool = ...) -> None: ...
 
 class BackupPreference(_message.Message):
     __slots__ = ("key", "value")

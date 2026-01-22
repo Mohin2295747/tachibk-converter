@@ -2,6 +2,7 @@ import json
 import gzip
 import varint
 import os
+import re
 from base64 import b64encode
 from struct import pack
 from google.protobuf.json_format import Parse, ParseError
@@ -11,28 +12,38 @@ import sys
 sys.path.insert(0, './manga/proto')
 from schema_pb2 import Backup
 
+b64_pattern = re.compile(r'^[A-Za-z0-9+/=]{4,}$')
+
 def bytes_preference(preference_value: dict):
     true_value = preference_value['value']['truevalue']
     ptype = preference_value['value']['type'].split('.')[-1].removesuffix('PreferenceValue')
 
-    if ptype == 'Boolean':
-        return b64encode(b'\x08' + (b'\x01' if true_value else b'\x00')).decode()
-    elif ptype in ['Int', 'Long']:
-        return b64encode(b'\x08' + varint.encode(int(true_value))).decode()
-    elif ptype == 'Float':
-        return b64encode(b'\r' + pack('f', float(true_value))).decode()
-    elif ptype == 'String':
-        encoded = true_value.encode('utf-8')
-        length = len(encoded)
-        return b64encode(b'\n' + length.to_bytes(2, 'little') + encoded).decode()
-    elif ptype == 'StringSet':
-        new_bytes = b''
-        for val in true_value:
-            encoded = val.encode('utf-8')
+    try:
+        if isinstance(true_value, str) and b64_pattern.match(true_value):
+            return true_value  # Already encoded, leave as-is
+
+        if ptype == 'Boolean':
+            return b64encode(b'\x08' + (b'\x01' if true_value else b'\x00')).decode()
+        elif ptype in ['Int', 'Long']:
+            return b64encode(b'\x08' + varint.encode(int(true_value))).decode()
+        elif ptype == 'Float':
+            return b64encode(b'\r' + pack('f', float(true_value))).decode()
+        elif ptype == 'String':
+            encoded = true_value.encode('utf-8')
             length = len(encoded)
-            new_bytes += b'\n' + length.to_bytes(2, 'little') + encoded
-        return b64encode(new_bytes).decode()
-    else:
+            return b64encode(b'\n' + length.to_bytes(2, 'little') + encoded).decode()
+        elif ptype == 'StringSet':
+            new_bytes = b''
+            for val in true_value:
+                encoded = val.encode('utf-8')
+                length = len(encoded)
+                new_bytes += b'\n' + length.to_bytes(2, 'little') + encoded
+            return b64encode(new_bytes).decode()
+        else:
+            print(f"⚠️ Unknown preference type: {ptype}, skipping.")
+            return ''
+    except Exception as e:
+        print(f"⚠️ Error encoding preference '{preference_value['key']}': {e}")
         return ''
 
 def convert_json_to_bytes(path: str) -> bytes:
@@ -40,7 +51,7 @@ def convert_json_to_bytes(path: str) -> bytes:
         message_dict = json.load(f)
 
     def needs_encoding(val):
-        return not isinstance(val, str) or not val.endswith("=")
+        return not isinstance(val, str) or not b64_pattern.match(val)
 
     for pref in message_dict.get("backupPreferences", []):
         if needs_encoding(pref["value"]["truevalue"]):

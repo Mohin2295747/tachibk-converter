@@ -1,4 +1,4 @@
-__version__ = "1.0.0"
+__version__ = "1.2.1"
 
 import gzip
 import re
@@ -174,7 +174,8 @@ def read_backup(input: str) -> str | bytes:
     if input.endswith('.tachibk') or input.endswith('.proto.gz'):
         with gzip.open(input, 'rb') as zip:
             backup_data = zip.read()
-            with open('manga/proto/extracted_tachibk', 'wb') as file:
+            # Fixed: Reverted to original extraction path
+            with open('extracted_tachibk', 'wb') as file:
                 file.write(backup_data)
     else:
         try:
