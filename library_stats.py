@@ -2,17 +2,8 @@ from collections import defaultdict
 import json
 import os
 
-def load_emoji_map(path="manga/emoji.txt"):
-    emoji_map = {}
-    if os.path.exists(path):
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                if ":" in line:
-                    key, emoji = line.strip().split(":", 1)
-                    emoji_map[key.strip()] = emoji.strip()
-    else:
-        print("⚠️ emoji.txt not found. Emojis will be skipped.")
-    return emoji_map
+from config import OUTPUT_DIR, MANGA_DIR
+
 
 def choose_json_file():
     print("\n📂 Select file to count:")
@@ -21,12 +12,12 @@ def choose_json_file():
     choice = input("Enter your choice (1/2): ").strip()
 
     if choice == "1":
-        return "manga/all.json"
+        return MANGA_DIR / "all.json"
 
     # List all .json files in output/, sorted by modification time
     files = sorted(
-        [f for f in os.listdir("output") if f.endswith(".json")],
-        key=lambda f: os.path.getmtime(os.path.join("output", f)),
+        [f for f in os.listdir(OUTPUT_DIR) if f.endswith(".json")],
+        key=lambda f: os.path.getmtime(OUTPUT_DIR / f),
         reverse=True
     )
 
@@ -41,7 +32,7 @@ def choose_json_file():
     try:
         selection = int(input("Enter file number to use: ").strip())
         if 1 <= selection <= len(files):
-            return os.path.join("output", files[selection - 1])
+            return OUTPUT_DIR / files[selection - 1]
     except ValueError:
         pass
 
@@ -84,7 +75,6 @@ def process_raw_backup(backup_data):
     return result
 
 def main():
-    emoji_map = load_emoji_map()
     input_file = choose_json_file()
 
     with open(input_file, "r", encoding="utf-8") as f:
@@ -122,8 +112,7 @@ def main():
 
     print("\n📦 Manga per extension (sorted A–Z):")
     for ext in sorted(major_extensions):
-        emoji = emoji_map.get(ext, "•")
-        print(f"{emoji} {ext}: {major_extensions[ext]}")
+        print(f"• {ext}: {major_extensions[ext]}")
 
     if minor_extensions:
         minor_names = ", ".join(sorted(minor_extensions.keys()))
@@ -138,8 +127,7 @@ def main():
 
     print("\n🗂️ Manga per category (sorted A–Z):")
     for cat in sorted(category_count):
-        emoji = emoji_map.get(cat, "•")
-        print(f"{emoji} {cat}: {category_count[cat]}")
+        print(f"• {cat}: {category_count[cat]}")
 
 if __name__ == "__main__":
     main()

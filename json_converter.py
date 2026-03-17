@@ -6,11 +6,11 @@ import re
 from base64 import b64encode
 from struct import pack
 from google.protobuf.json_format import Parse, ParseError
+from pathlib import Path
 
-# ✅ Make sure schema_pb2 can be found
-import sys
-sys.path.insert(0, './manga/proto')
-from schema_pb2 import Backup
+from config import OUTPUT_DIR, SCHEMA_DIR
+from fork_manager import ForkManager
+
 
 b64_pattern = re.compile(r'^[A-Za-z0-9+/=]{4,}$')
 
@@ -46,7 +46,7 @@ def bytes_preference(preference_value: dict):
         print(f"⚠️ Error encoding preference '{preference_value['key']}': {e}")
         return ''
 
-def convert_json_to_bytes(path: str) -> bytes:
+def convert_json_to_bytes(path: str, fork: str = 'mihon') -> bytes:
     with open(path, "r", encoding="utf-8") as f:
         message_dict = json.load(f)
 
@@ -63,6 +63,8 @@ def convert_json_to_bytes(path: str) -> bytes:
                 pref["value"]["truevalue"] = bytes_preference(pref)
 
     try:
+        fork_manager = ForkManager(fork)
+        Backup = fork_manager.get_backup_class()
         return Parse(json.dumps(message_dict), Backup()).SerializeToString()
     except ParseError as e:
         print("❌ Invalid JSON backup:", e)
@@ -78,6 +80,13 @@ def list_json_files_sorted(directory="output"):
     files = sorted(files, key=lambda f: os.path.getmtime(os.path.join(directory, f)), reverse=True)
     return files
 
+def convert_json_to_tachibk(json_file: Path, output_dir: Path, fork: str = 'mihon') -> Path:
+    """Convert JSON file to TACHIBK format"""
+    output_filename = output_dir / json_file.name.replace(".json", ".tachibk")
+    message_bytes = convert_json_to_bytes(str(json_file), fork)
+    write_tachibk(message_bytes, str(output_filename))
+    return output_filename
+
 def main():
     print("\n\033[1mAvailable JSON files (newest first):\033[0m")
     files = list_json_files_sorted()
@@ -87,7 +96,7 @@ def main():
         return
 
     for i, file in enumerate(files, 1):
-        timestamp = os.path.getmtime(os.path.join("output", file))
+        timestamp = os.path.getmtime(OUTPUT_DIR / file)
         print(f"\033[96m{i:>2}.\033[0m {file} \033[90m(last modified: {timestamp:.0f})\033[0m")
 
     selected = input("\nEnter the number of the JSON file to convert: ").strip()
@@ -95,12 +104,14 @@ def main():
         print("❌ Invalid selection.")
         return
 
-    selected_file = files[int(selected) - 1]
-    input_path = os.path.join("output", selected_file)
-    output_path = os.path.join("output", selected_file.replace(".json", ".tachibk"))
+    fork_choice = input("\nEnter fork (mihon/sy/j2k/yokai/komikku) [default: mihon]: ").strip() or 'mihon'
 
-    msg = convert_json_to_bytes(input_path)
-    write_tachibk(msg, output_path)
+    selected_file = files[int(selected) - 1]
+    input_path = OUTPUT_DIR / selected_file
+    output_path = OUTPUT_DIR / selected_file.replace(".json", ".tachibk")
+
+    msg = convert_json_to_bytes(str(input_path), fork_choice)
+    write_tachibk(msg, str(output_path))
 
 if __name__ == "__main__":
     main()

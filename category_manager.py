@@ -2,25 +2,12 @@ import json
 import os
 from collections import defaultdict
 
-ROTATION_LIMIT = 5
-ROTATION_FILE = "output/rotation_counter.txt"
-OUTPUT_BASENAME = "output_cleaned_{}.json"
+from config import OUTPUT_DIR, ROTATION_FILE, OUTPUT_BASENAME, ROTATION_LIMIT
 
-def load_emoji_map(path="manga/emoji.txt"):
-    emoji_map = {}
-    if os.path.exists(path):
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                if ":" in line:
-                    key, emoji = line.strip().split(":", 1)
-                    emoji_map[key.strip()] = emoji.strip()
-    else:
-        print("⚠️ emoji.txt not found. Emojis will be skipped.")
-    return emoji_map
 
 def get_next_output_filename():
-    os.makedirs("output", exist_ok=True)
-    # Read rotation count
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
     if os.path.exists(ROTATION_FILE):
         with open(ROTATION_FILE, "r") as f:
             try:
@@ -30,21 +17,17 @@ def get_next_output_filename():
     else:
         counter = 0
 
-    # Determine next file index
     index = (counter % ROTATION_LIMIT) + 1
-    output_filename = f"output/{OUTPUT_BASENAME.format(index)}"
+    output_filename = OUTPUT_DIR / OUTPUT_BASENAME.format(index)
 
-    # Save updated counter
     with open(ROTATION_FILE, "w") as f:
         f.write(str(counter + 1))
 
     return output_filename
 
 # Load data
-with open("output/output.json", "r", encoding="utf-8") as f:
+with open(OUTPUT_DIR / "output.json", "r", encoding="utf-8") as f:
     data = json.load(f)
-
-emoji_map = load_emoji_map()
 
 # Build category and source mappings
 category_map = {}
@@ -91,11 +74,10 @@ if any(not m["raw_data"].get("categories") for m in manga_list):
 # Sort categories alphabetically
 sorted_categories = sorted(category_counts.items(), key=lambda x: x[0].lower())
 
-# Display categories with emojis and counts
+# Display categories with counts
 print("\n\033[1mAvailable Categories:\033[0m")
 for i, (category, count) in enumerate(sorted_categories, 1):
-    emoji = emoji_map.get(category, "•")
-    print(f"\033[94m{i:>2}.\033[0m {emoji} {category}: \033[93m{count}\033[0m manga")
+    print(f"\033[94m{i:>2}.\033[0m • {category}: \033[93m{count}\033[0m manga")
 
 # User choice
 print("\n\033[1mOptions:\033[0m")

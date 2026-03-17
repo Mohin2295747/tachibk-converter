@@ -1,23 +1,13 @@
 import json
 from collections import defaultdict
 
-def load_emoji_map(path="manga/emoji.txt"):
-    """Load emoji mappings from file"""
-    emoji_map = {}
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                if ":" in line:
-                    key, emoji = line.strip().split(":", 1)
-                    emoji_map[key.strip()] = emoji.strip()
-    except FileNotFoundError:
-        print("⚠️ emoji.txt not found. Emojis will be skipped.")
-    return emoji_map
+from config import OUTPUT_DIR
+
 
 def load_manga_data():
     """Load and process manga data from output.json"""
     try:
-        with open("output/output.json", "r", encoding="utf-8") as f:
+        with open(OUTPUT_DIR / "output.json", "r", encoding="utf-8") as f:
             data = json.load(f)
     except FileNotFoundError:
         print("❌ output/output.json not found!")
@@ -59,7 +49,7 @@ def search_manga(manga_list, search_term):
     
     return results
 
-def display_results(results, emoji_map):
+def display_results(results):
     """Display search results with colored output"""
     if not results:
         print("❌ No manga found matching your search.")
@@ -74,11 +64,10 @@ def display_results(results, emoji_map):
         # Format title in dark blue
         title_formatted = f"\033[94m{title}\033[0m"
         
-        # Format categories in medium green with emojis
+        # Format categories in medium green
         category_strings = []
         for cat in categories:
-            emoji = emoji_map.get(cat, "•")
-            category_strings.append(f"\033[92m{emoji} {cat}\033[0m")
+            category_strings.append(f"\033[92m• {cat}\033[0m")
         
         categories_formatted = ", ".join(category_strings)
         
@@ -94,9 +83,6 @@ def main():
     manga_list, category_map, data = load_manga_data()
     if manga_list is None:
         return
-    
-    # Load emoji map
-    emoji_map = load_emoji_map()
     
     while True:
         print("\n\033[1mSearch Options:\033[0m")
@@ -124,7 +110,7 @@ def main():
         results = search_manga(manga_list, search_term)
         
         # Display results
-        display_results(results, emoji_map)
+        display_results(results)
         
         # Show additional options after search
         if results:
@@ -143,8 +129,7 @@ def main():
                         print(f"\n📖 Detailed info for: \033[94m{manga['title']}\033[0m")
                         print(f"📚 Total categories: {len(manga['categories'])}")
                         for cat in manga['categories']:
-                            emoji = emoji_map.get(cat, "•")
-                            print(f"   {emoji} \033[92m{cat}\033[0m")
+                            print(f"   • \033[92m{cat}\033[0m")
                         
                         # Show additional info if available
                         raw = manga['raw_data']

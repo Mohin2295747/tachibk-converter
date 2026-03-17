@@ -2,18 +2,8 @@ import json
 import os
 from collections import defaultdict
 
-# === Load emoji.txt ===
-def load_emoji_map(path="manga/emoji.txt"):
-    emoji_map = {}
-    if os.path.exists(path):
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                if ":" in line:
-                    key, emoji = line.strip().split(":", 1)
-                    emoji_map[key.strip()] = emoji.strip()
-    return emoji_map
+from config import MANGA_DIR
 
-emoji_map = load_emoji_map()
 
 # === Load output.json ===
 with open("output/output.json", "r", encoding="utf-8") as f:
@@ -51,21 +41,20 @@ for manga in data.get("backupManga", []):
     })
 
 # === Prepare output directories ===
-output_dir = "manga"
-sub_dir = os.path.join(output_dir, "sub")
-ext_dir = os.path.join(output_dir, "extension")
+sub_dir = MANGA_DIR / "sub"
+ext_dir = MANGA_DIR / "extension"
 os.makedirs(sub_dir, exist_ok=True)
 os.makedirs(ext_dir, exist_ok=True)
 
 # === Clean sub/ and extension/ folders ===
 for folder in [sub_dir, ext_dir]:
     for file in os.listdir(folder):
-        file_path = os.path.join(folder, file)
-        if os.path.isfile(file_path):
+        file_path = folder / file
+        if file_path.is_file():
             os.remove(file_path)
 
 # === Write all.json ===
-with open(os.path.join(output_dir, "all.json"), "w", encoding="utf-8") as f:
+with open(MANGA_DIR / "all.json", "w", encoding="utf-8") as f:
     json.dump(result, f, ensure_ascii=False, indent=2)
 
 # === Write category .txt files ===
@@ -76,10 +65,9 @@ for entry in result:
 
 for category, entries in category_groups.items():
     safe_category = category.replace("/", "-").replace("\\", "-")
-    emoji = emoji_map.get(category, "•")
-    filename = os.path.join(sub_dir, f"{safe_category}.txt")
+    filename = sub_dir / f"{safe_category}.txt"
     with open(filename, "w", encoding="utf-8") as f:
-        f.write(f"# {emoji} {category}\n\n")
+        f.write(f"# • {category}\n\n")
         for i, entry in enumerate(entries, start=1):
             tick = " ✅" if entry["read_chapters"] == entry["total_chapters"] and entry["total_chapters"] > 0 else ""
             f.write(f"{i}. {entry['title']} ({entry['total_chapters']}) [{entry['extension']}] {tick}\n")
@@ -92,14 +80,14 @@ for entry in result:
 
 for extension, entries in extension_groups.items():
     safe_extension = extension.replace("/", "-").replace("\\", "-")
-    filename = os.path.join(ext_dir, f"{safe_extension}.txt")
+    filename = ext_dir / f"{safe_extension}.txt"
     with open(filename, "w", encoding="utf-8") as f:
         f.write(f"# 📦 {extension}\n\n")
         for i, entry in enumerate(entries, start=1):
-            catlist = ", ".join(f"{emoji_map.get(cat, '•')} {cat}" for cat in entry.get("categories", ["Uncategorized"]))
+            catlist = ", ".join(f"• {cat}" for cat in entry.get("categories", ["Uncategorized"]))
             tick = " ✅" if entry["read_chapters"] == entry["total_chapters"] and entry["total_chapters"] > 0 else ""
             f.write(f"{i}. {entry['title']} ({entry['total_chapters']}) [{catlist}]{tick}\n")
 
-print("✅ all.json updated with full category + emoji support.")
+print("✅ all.json updated with full category support.")
 print("📁 Category text files saved in 'manga/sub/'")
 print("📁 Extension text files saved in 'manga/extension/'")

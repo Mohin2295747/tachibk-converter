@@ -68,7 +68,7 @@ SELECTED_FILE="${BACKUP_FILES[$((file_num-1))]}"
 echo "📦 Selected: ${SELECTED_FILE##*/}"
 
 # Decode the backup
-python3 tachibk-converter.py --input "$SELECTED_FILE" --output "$OUTPUT_DIR/output.json"
+python3 tachibk_converter.py --input "$SELECTED_FILE" --output "$OUTPUT_DIR/output.json"
 
 if [ ! -f "$OUTPUT_DIR/output.json" ]; then
     echo "❌ output.json not found after decoding!"
@@ -175,7 +175,7 @@ fi
 echo "✅ Using cleaned JSON: $CLEANED_JSON"
 
 # Re-encode to tachibk
-if ! python3 json_to_tachibk.py --input "$CLEANED_JSON" --output "$OUTPUT_DIR/$(basename "${CLEANED_JSON%.json}.tachibk")"; then
+if ! python3 json_converter.py --input "$CLEANED_JSON" --output "$OUTPUT_DIR/$(basename "${CLEANED_JSON%.json}.tachibk")"; then
     echo "❌ Failed to re-encode JSON to .tachibk"
     exit 1
 fi

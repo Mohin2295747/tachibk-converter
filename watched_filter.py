@@ -1,29 +1,14 @@
 import json
 import os
-import shutil
 from collections import defaultdict
 
-# Configuration
-ROTATION_LIMIT = 5
-ROTATION_FILE = "output/rotation_counter.txt"
-OUTPUT_BASENAME = "output_cleaned_{}.json"
-TACHIBK_CONVERTER = "json_to_tachibk.py"
-EXPLAIN_DIR = "explain"
+from config import OUTPUT_DIR, ROTATION_FILE, OUTPUT_BASENAME, ROTATION_LIMIT, EXPLAIN_DIR
+from json_converter import convert_json_to_tachibk
 
-def load_emoji_map(path="manga/emoji.txt"):
-    emoji_map = {}
-    if os.path.exists(path):
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                if ":" in line:
-                    key, emoji = line.strip().split(":", 1)
-                    emoji_map[key.strip()] = emoji.strip()
-    else:
-        print("⚠️ emoji.txt not found. Emojis will be skipped.")
-    return emoji_map
 
 def get_next_output_filename():
-    os.makedirs("output", exist_ok=True)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
     if os.path.exists(ROTATION_FILE):
         with open(ROTATION_FILE, "r") as f:
             try:
@@ -34,26 +19,17 @@ def get_next_output_filename():
         counter = 0
 
     index = (counter % ROTATION_LIMIT) + 1
-    output_filename = f"output/{OUTPUT_BASENAME.format(index)}"
+    output_filename = OUTPUT_DIR / OUTPUT_BASENAME.format(index)
 
     with open(ROTATION_FILE, "w") as f:
         f.write(str(counter + 1))
 
     return output_filename
 
-def convert_to_tachibk(json_file, output_dir):
-    """Convert JSON file to TACHIBK format"""
-    output_filename = os.path.join(output_dir, os.path.basename(json_file).replace(".json", ".tachibk"))
-    cmd = f"python {TACHIBK_CONVERTER} --input {json_file} --output {output_filename}"
-    result = os.system(cmd)
-    return result == 0, output_filename
-
 def main():
     # Load data
-    with open("output/output.json", "r", encoding="utf-8") as f:
+    with open(OUTPUT_DIR / "output.json", "r", encoding="utf-8") as f:
         data = json.load(f)
-
-    emoji_map = load_emoji_map()
 
     # Build mappings
     category_map = {}
@@ -106,11 +82,10 @@ def main():
     # Sort categories alphabetically
     sorted_categories = sorted(categories_with_watched.items(), key=lambda x: x[0].lower())
 
-    # Display categories with emojis and counts
+    # Display categories with counts
     print("\n\033[1mCategories with watched manga:\033[0m")
     for i, (category, count) in enumerate(sorted_categories, 1):
-        emoji = emoji_map.get(category, "•")
-        print(f"\033[94m{i:>2}.\033[0m {emoji} {category}: \033[93m{count}\033[0m watched manga")
+        print(f"\033[94m{i:>2}.\033[0m • {category}: \033[93m{count}\033[0m watched manga")
 
     # User selection
     selected = input("\nEnter category numbers to keep (space-separated): ").split()
@@ -190,9 +165,9 @@ def main():
     print(f"\n🔄 Converting to TACHIBK format...")
     os.makedirs(EXPLAIN_DIR, exist_ok=True)
     
-    success, tachibk_file = convert_to_tachibk(output_file, EXPLAIN_DIR)
+    tachibk_file = convert_json_to_tachibk(output_file, EXPLAIN_DIR)
     
-    if success:
+    if tachibk_file:
         print(f"✅ TACHIBK file created: {tachibk_file}")
         print(f"✅ Processing complete! Cleaned data saved to \033[1m{output_file}\033[0m")
     else:

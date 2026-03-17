@@ -9,7 +9,9 @@ from typing import Dict, List, Any, Set, Tuple
 import argparse
 from datetime import datetime
 
-sys.path.insert(0, './manga/proto')
+from config import OUTPUT_DIR, BACKUP_DIR
+from fork_manager import ForkManager
+
 
 def get_tachibk_files(directory: str = ".") -> List[Tuple[str, float, str]]:
     tachibk_files = []
@@ -43,7 +45,7 @@ def display_file_choices(files: List[Tuple[str, float, str]], title: str = "Avai
 def select_files_interactive():
     print("\n\033[1m🔍 Tachiyomi Backup Diff Tool\033[0m")
     all_files = []
-    for directory in [".", "backup", "output"]:
+    for directory in [".", str(BACKUP_DIR), str(OUTPUT_DIR)]:
         if os.path.exists(directory):
             all_files.extend(get_tachibk_files(directory))
     if not all_files:
@@ -91,20 +93,20 @@ def select_files_interactive():
             sys.exit(0)
     return file1, file2
 
-def load_tachibk_file(file_path: str) -> Dict[str, Any]:
+def load_tachibk_file(file_path: str, fork: str = 'mihon') -> Dict[str, Any]:
     print(f"Loading: {os.path.basename(file_path)}...")
     try:
         with gzip.open(file_path, 'rb') as f:
             backup_data = f.read()
-        from schema_pb2 import Backup
+            
+        fork_manager = ForkManager(fork)
+        Backup = fork_manager.get_backup_class()
+        
         from google.protobuf.json_format import MessageToDict
         message = Backup()
         message.ParseFromString(backup_data)
         data = MessageToDict(message)
         return data
-    except ImportError as e:
-        print(f"❌ Error: {e}")
-        sys.exit(1)
     except Exception as e:
         print(f"❌ Error reading {file_path}: {e}")
         sys.exit(1)
@@ -226,44 +228,34 @@ def print_simple_summary(changes: Dict[str, Any], old_filename: str, new_filenam
             print(f"   {i+1:>2}. {title}")
     print("\n" + "="*70)
 
-def save_changes_as_tachibk(changes: Dict[str, Any], output_path: str):
+def save_changes_as_tachibk(changes: Dict[str, Any], output_path: str, fork: str = 'mihon'):
     try:
         print(f"\n🔄 Creating TACHIBK file...")
         total_items = sum(len(v) for v in changes.values() if isinstance(v, list))
         if total_items == 0:
             print("❌ No changes to save! Diff would be empty.")
             return False
+            
         temp_json = output_path.replace('.tachibk', '_temp.json')
         with open(temp_json, 'w', encoding='utf-8') as f:
             json.dump(changes, f, indent=2, ensure_ascii=False)
         print(f"  ✓ Created temporary JSON: {temp_json}")
-        try:
-            from json_to_tachibk import convert_json_to_bytes
-            print("  ✓ Converting JSON to TACHIBK...")
-            message_bytes = convert_json_to_bytes(temp_json)
-            with gzip.open(output_path, 'wb') as f:
-                f.write(message_bytes)
-            file_size = os.path.getsize(output_path)
-            print(f"\n✅ Diff backup saved to: {output_path}")
-            print(f"   File size: {file_size:,} bytes ({file_size/1024/1024:.2f} MB)")
-            if os.path.exists(temp_json):
-                os.remove(temp_json)
-            return True
-        except ImportError:
-            import subprocess
-            result = subprocess.run(
-                ['python', 'tachibk-converter.py', '--input', temp_json, '--output', output_path],
-                capture_output=True,
-                text=True
-            )
-            if result.returncode == 0:
-                print(f"\n✅ Diff backup saved to: {output_path}")
-                if os.path.exists(temp_json):
-                    os.remove(temp_json)
-                return True
-            else:
-                print(f"❌ Conversion failed: {result.stderr}")
-                return False
+        
+        from json_converter import convert_json_to_bytes
+        print("  ✓ Converting JSON to TACHIBK...")
+        message_bytes = convert_json_to_bytes(temp_json, fork)
+        
+        with gzip.open(output_path, 'wb') as f:
+            f.write(message_bytes)
+            
+        file_size = os.path.getsize(output_path)
+        print(f"\n✅ Diff backup saved to: {output_path}")
+        print(f"   File size: {file_size:,} bytes ({file_size/1024/1024:.2f} MB)")
+        
+        if os.path.exists(temp_json):
+            os.remove(temp_json)
+        return True
+        
     except Exception as e:
         print(f"❌ Error creating TACHIBK: {type(e).__name__}: {e}")
         return False
@@ -287,6 +279,7 @@ def generate_output_filename(old_file: str, new_file: str) -> str:
 def main():
     parser = argparse.ArgumentParser(description='Compare two Tachiyomi .tachibk files and create a diff backup')
     parser.add_argument('files', nargs='*', help='Optional: Specify two .tachibk files to compare')
+    parser.add_argument('--fork', default='mihon', choices=list(FORKS.keys()), help='Fork to use for schema')
     args = parser.parse_args()
     
     if len(args.files) == 2:
@@ -320,8 +313,8 @@ def main():
     print("📖 LOADING BACKUPS")
     print("="*60)
     
-    old_data = load_tachibk_file(file1)
-    new_data = load_tachibk_file(file2)
+    old_data = load_tachibk_file(file1, args.fork)
+    new_data = load_tachibk_file(file2, args.fork)
     
     old_count = len(old_data.get('backupManga', []))
     new_count = len(new_data.get('backupManga', []))
@@ -348,7 +341,7 @@ def main():
     
     output_file = generate_output_filename(file1, file2)
     print(f"\n🛠️ Creating diff backup...")
-    success = save_changes_as_tachibk(changes, output_file)
+    success = save_changes_as_tachibk(changes, output_file, args.fork)
     
     if success:
         print("\n🎉 Diff complete!")
